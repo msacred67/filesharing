@@ -175,10 +175,11 @@ class transferfile extends Thread
                 while(Server.iterator.hasNext())
                 {
                     transferfile x = Server.iterator.next();
-                    if(x.GetIp() == IPT)
+                    if(x.GetIp().equals(IPT))
                     {
                         x.transffile();
                     }
+                    Server.iterator = (ListIterator<transferfile>) Server.iterator.next();
                 }
                 continue;
             }
