@@ -21,7 +21,7 @@ public class Server {
     public static void main(String args[]) throws Exception
     {
         ServerSocket soc=new ServerSocket(4444);
-        System.out.println("FTP Server Port Number " + soc.getLocalPort());
+        System.out.println(soc.getLocalPort());
         while(true)
         {
             System.out.println("Menunggu Panggilan");
@@ -48,7 +48,7 @@ class transferfile extends Thread
             dout=new DataOutputStream(ClientSoc.getOutputStream());
             
             System.out.println(soc.getInetAddress() + " telah masuk");
-            InetAddress address = InetAddress.getLocalHost();
+            //InetAddress address = InetAddress.getLocalHost();
            // FTPServer.clientlist[i] = address.getHostAddress();
            // System.out.println(address.getHostAddress());
             //i++;
