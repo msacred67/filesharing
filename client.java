@@ -3,204 +3,198 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package client;
+package server;
 
 import java.net.*;
 import java.io.*;
+import java.util.*;
 /**
  *
  * @author USER
  */
-public class Client {
-/**
-     * @param args the command line arguments
-     */
-    public static String sockaddr = "10.151.40.123";
+public class Server {
+
+    //public static String[] clientlist;
+    //public static int i = 0;
+    public static LinkedList clients = new LinkedList();
+    public static ListIterator<transferfile> iterator = clients.listIterator();
     public static void main(String args[]) throws Exception
     {
-        
-        Socket soc=new Socket(sockaddr ,4444);
-        transferfileClient t=new transferfileClient(soc);
-        t.displayMenu();
-        
+        ServerSocket soc=new ServerSocket(4444);
+        System.out.println(soc.getLocalPort());
+        while(true)
+        {
+            System.out.println("Menunggu Panggilan");
+            transferfile t=new transferfile(soc.accept()); 
+            clients.add(t);
+        }
     }
-    
 }
-class transferfileClient
+
+class transferfile extends Thread
 {
+    String filet;
     Socket ClientSoc;
 
     DataInputStream din;
     DataOutputStream dout;
-    BufferedReader br;
-    transferfileClient(Socket soc)
+    
+    transferfile(Socket soc)
     {
         try
         {
-            ClientSoc=soc;
+            ClientSoc=soc;                        
             din=new DataInputStream(ClientSoc.getInputStream());
             dout=new DataOutputStream(ClientSoc.getOutputStream());
-            br=new BufferedReader(new InputStreamReader(System.in));
+            
+            System.out.println(soc.getInetAddress() + " telah masuk");
+            //InetAddress address = InetAddress.getLocalHost();
+           // FTPServer.clientlist[i] = address.getHostAddress();
+           // System.out.println(address.getHostAddress());
+            //i++;
+            start();
+            
         }
         catch(Exception ex)
         {
         }        
     }
+    
+    String GetIp() throws Exception
+    {
+        InetAddress address = InetAddress.getLocalHost();
+        return address.getHostAddress();
+    }
     void SendFile() throws Exception
     {        
-        
-        String filename;
-        System.out.print("Masukkan Nama File:");
-        filename=br.readLine();
-            
+        String filename=din.readUTF();
         File f=new File(filename);
         if(!f.exists())
         {
-            System.out.println("File Tidak Ada");
             dout.writeUTF("Tidak Ada");
             return;
         }
-        
-        dout.writeUTF(filename);
-        
-        String msgFromServer=din.readUTF();
-        if(msgFromServer.compareTo("File Exists")==0)
+        else
         {
-            String Option;
-            System.out.println("OverWrite (Y/N) ?");
-            Option=br.readLine();            
-            if(Option=="Y")    
+            dout.writeUTF("READY");
+            FileInputStream fin=new FileInputStream(f);
+            int ch;
+            do
             {
-                dout.writeUTF("Y");
+                ch=fin.read();
+                dout.writeUTF(String.valueOf(ch));
             }
-            else
-            {
-                dout.writeUTF("N");
-                return;
-            }
+            while(ch!=-1);    
+            fin.close();    
+            dout.writeUTF("File Receive Successfully");                            
         }
-        
-        System.out.println("Mengirim File");
-        FileInputStream fin=new FileInputStream(f);
-        int ch;
-        do
-        {
-            ch=fin.read();
-            dout.writeUTF(String.valueOf(ch));
-        }
-        while(ch!=-1);
-        fin.close();
-        System.out.println(din.readUTF());
-        
     }
     
     void ReceiveFile() throws Exception
     {
-        String fileName;
-        System.out.print("Masukkan Nama File:");
-        fileName=br.readLine();
-        dout.writeUTF(fileName);
-        String msgFromServer=din.readUTF();
-        
-        if(msgFromServer.compareTo("Tidak Ada")==0)
+        String filename=din.readUTF();
+        filet = filename;
+        if(filename.compareTo("Tidak Ada")==0)
         {
-            System.out.println("File Tidak Ditemukan");
             return;
         }
-        else if(msgFromServer.compareTo("READY")==0)
+        File f=new File(filename);
+        String option;
+        
+        if(f.exists())
         {
-            System.out.println("Menerima File");
-            File f=new File(fileName);
-            if(f.exists())
-            {
-                String Option;
-                System.out.println("OverWrite (Y/N) ?");
-                Option=br.readLine();            
-                if(Option=="N")    
-                {
-                    dout.flush();
-                    return;    
-                }                
-            }
-            FileOutputStream fout=new FileOutputStream(f);
-            int ch;
-            String temp;
-            do
-            {
-                temp=din.readUTF();
-                ch=Integer.parseInt(temp);
-                if(ch!=-1)
-                {
-                    fout.write(ch);                    
-                }
-            }while(ch!=-1);
-            fout.close();
-            System.out.println(din.readUTF());
-                
+            dout.writeUTF("File Exists");
+            option=din.readUTF();
         }
-    }
-    
-    public void transfile() throws Exception
-    {
-        String filename = din.readUTF();
-        
-            File f=new File(filename);
-        
-            FileOutputStream fout=new FileOutputStream(f);
-            int ch;
-            String temp;
-            do
-            {
-                temp=din.readUTF();
-                ch=Integer.parseInt(temp);
-                if(ch!=-1)
-                {
-                    fout.write(ch);                    
-                }
-            }while(ch!=-1);
-            fout.close();
-            System.out.println(din.readUTF());
+        else
+        {
+            dout.writeUTF("SendFile");
+            option="Y";
         }
-        
-
-    public void displayMenu() throws Exception
-    {
-        while(true)
-        {    
-            System.out.println("[ MENU ]");
-            System.out.println("1. Send File");
-            System.out.println("2. Receive File");
-            System.out.println("3. Idle");
-            System.out.println("4. Exit");
-            int choice;
-            choice=Integer.parseInt(br.readLine());
-            if(choice==1)
-            {
-                dout.writeUTF("SEND");
-                System.out.println("Masukkan IP Tujuan");
-                String IP = br.readLine();
-                dout.writeUTF(IP);
-                SendFile();
-            }
-            else if(choice==2)
-            {
-                dout.writeUTF("GET");
-                ReceiveFile();
-            }
             
-            else if(choice==3)
+            if(option.compareTo("Y")==0)
             {
-                transfile();
+                FileOutputStream fout=new FileOutputStream(f);
+                int ch;
+                String temp;
+                do
+                {
+                    temp=din.readUTF();
+                    ch=Integer.parseInt(temp);
+                    if(ch!=-1)
+                    {
+                        fout.write(ch);                    
+                    }
+                }while(ch!=-1);
+                fout.close();
+                dout.writeUTF("File Send Successfully");
             }
-            
             else
             {
-                dout.writeUTF("DISCONNECT");
+                return;
+            }
+            
+    }
+
+    public void transffile() throws Exception
+    {
+        String filename=filet;
+        File f=new File(filename);
+        dout.writeUTF(filet);
+        
+            FileInputStream fin=new FileInputStream(f);
+            int ch;
+            do
+            {
+                ch=fin.read();
+                dout.writeUTF(String.valueOf(ch));
+            }
+            while(ch!=-1);    
+            fin.close();    
+            dout.writeUTF("File Receive Successfully");   
+    }
+
+    public void run()
+    {
+        while(true)
+        {
+            try
+            {
+            String Command=din.readUTF();
+            if(Command.compareTo("GET")==0)
+            {
+                System.out.println("\tGET Command");
+                SendFile();
+                continue;
+            }
+            else if(Command.compareTo("SEND")==0)
+            {
+                System.out.println("\tSEND Command");   
+                String IPT = din.readUTF();
+                ReceiveFile();
+                while(Server.iterator.hasNext())
+                {
+                    transferfile x = Server.iterator.next();
+                    if(x.GetIp().equals(IPT))
+                    {
+                        x.transffile();
+                    }
+                    Server.iterator = (ListIterator<transferfile>) Server.iterator.next();
+                }
+                continue;
+            }
+            
+            else if(Command.compareTo("DISCONNECT")==0)
+            {
+                System.out.println("\tDisconnect Command");
                 ClientSoc.close();
                 din.close();
                 dout.close();
-                
-                return;
+                break;
+            }
+            }
+            catch(Exception ex)
+            {
             }
         }
     }
